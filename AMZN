@@ -1,0 +1,46 @@
+import requests
+from datetime import datetime
+
+def generate_marketstack_report(api_key, symbols, filename="marketstack_report.json"):
+    """
+    Generates a Marketstack report in JSON format without using pandas.
+
+    Args:
+        api_key (str): Your Marketstack API key.
+        symbols (str): Comma-separated string of stock symbols (e.g., "AAPL,MSFT,GOOG").
+        filename (str): The name of the JSON file to create.
+    """
+    base_url = "http://api.marketstack.com/v1/eod"
+    today = datetime.now().strftime("%Y-%m-%d")    
+
+    params = {
+        'access_key': api_key,
+        'symbols': symbols,
+        'date_from': "2025-03-01",
+        'date_to': "2025-03-31",
+        'limit': 31,
+    }
+
+    try:
+        response = requests.get(base_url, params=params)
+        response.raise_for_status()
+
+        data = response.json()
+        
+        with open(filename, 'w') as f:
+            import json
+            json.dump(data, f, indent=4)
+
+        print(f"Marketstack report saved to {filename}")
+    except requests.exceptions.RequestException as e:
+        print(f"Error during API request: {e}")
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+
+
+
+# Example usage (replace with your API key and symbols):
+if __name__ == "__main__":
+    api_key = "ebd13cb01404512ea3e1ab2ae81a7b0f"  # Get API key from environment variable
+    symbols = "AMZN"  # Example symbol
+    generate_marketstack_report(api_key, symbols)
