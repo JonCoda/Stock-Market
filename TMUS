@@ -1,8 +1,11 @@
 import requests
 from datetime import datetime
 import numpy as np
+from scipy.signal import argrelextrema
+from numpy import polyfit
 import pandas as pd
 import matplotlib.pyplot as plt
+
 def generate_marketstack_report(api_key, symbols, filename="marketstack_report.json"):
     """
     Generates a Marketstack report in JSON format without using pandas.
@@ -18,8 +21,8 @@ def generate_marketstack_report(api_key, symbols, filename="marketstack_report.j
     params = {
         'access_key': api_key,
         'symbols': symbols,
-        'date_from': "2025-03-01",
-        'date_to': "2025-03-31",
+        'date_from': "2024-03-01",
+        'date_to': "2025-04-01",
         'limit': 31,
     }
 
@@ -39,6 +42,53 @@ def generate_marketstack_report(api_key, symbols, filename="marketstack_report.j
     except Exception as e:
         print(f"An unexpected error occurred: {e}")
 
+def analyze_trend(data):
+    """
+    Analyzes the trend of the closing prices in the Marketstack data.
+
+    Args:
+        data (dict): The Marketstack data in JSON format.
+    """
+    if 'data' in data and data['data']:
+        closing_prices = [day['close'] for day in data['data']]
+        dates = [i for i in range(len(closing_prices))]
+
+        # Fit a linear trend line
+        coefficients = polyfit(dates, closing_prices, 1)
+        polynomial = np.poly1d(coefficients)
+        trendline = polynomial(dates)
+
+        # Determine trend direction
+        if coefficients[0] > 0:
+            print("Trend: Uptrend")
+        elif coefficients[0] < 0:
+            print("Trend: Downtrend")
+        else:
+            print("Trend: Sideways")
+
+def find_support_resistance(data):
+    """
+    Finds potential support and resistance levels in the Marketstack data.
+
+    Args:
+        data (dict): The Marketstack data in JSON format.
+    """
+    if 'data' in data and data['data']:
+        closing_prices = np.array([day['close'] for day in data['data']])
+
+        # Find local maxima (potential resistance)
+        maxima_indices = argrelextrema(closing_prices, np.greater)[0]
+        maxima_prices = closing_prices[maxima_indices]
+        print("Potential Resistance Levels:", maxima_prices)
+
+        # Find local minima (potential support)
+        minima_indices = argrelextrema(closing_prices, np.less)[0]
+        minima_prices = closing_prices[minima_indices]
+        print("Potential Support Levels:", minima_prices)
+    else:
+        print("No data found to analyze support and resistance.")
+
+
 
 
 # Example usage (replace with your API key and symbols):
@@ -46,3 +96,10 @@ if __name__ == "__main__":
     api_key = "ebd13cb01404512ea3e1ab2ae81a7b0f"  # Get API key from environment variable
     symbols = "TMUS"  # Example symbol
     generate_marketstack_report(api_key, symbols)
+
+    # Load the generated report and analyze the trend
+    with open("marketstack_report.json", 'r') as f:
+        import json
+        data = json.load(f)
+        analyze_trend(data)
+        find_support_resistance(data)
