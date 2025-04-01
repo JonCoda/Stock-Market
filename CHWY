@@ -1,5 +1,8 @@
 import requests
 from datetime import datetime
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
 
 def generate_marketstack_report(api_key, symbols, filename="marketstack_report.json"):
     """
@@ -37,6 +40,14 @@ def generate_marketstack_report(api_key, symbols, filename="marketstack_report.j
     except Exception as e:
         print(f"An unexpected error occurred: {e}")
 
+def generate_numpy_data():
+    data = np.random.rand(5, 5)
+    print(data)
+
+def generate_pandas_data():
+    data = {'col1': [1, 2], 'col2': [3, 4]}
+    df = pd.DataFrame(data)
+    print(df)
 
 
 # Example usage (replace with your API key and symbols):
@@ -44,3 +55,5 @@ if __name__ == "__main__":
     api_key = "ebd13cb01404512ea3e1ab2ae81a7b0f"  # Get API key from environment variable
     symbols = "CHWY"  # Example symbol
     generate_marketstack_report(api_key, symbols)
+    generate_numpy_data()
+    generate_pandas_data()

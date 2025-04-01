@@ -1,6 +1,8 @@
 import requests
 from datetime import datetime
-
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
 def generate_marketstack_report(api_key, symbols, filename="marketstack_report.json"):
     """
     Generates a Marketstack report in JSON format without using pandas.
