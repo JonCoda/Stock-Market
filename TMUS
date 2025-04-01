@@ -89,17 +89,62 @@ def find_support_resistance(data):
         print("No data found to analyze support and resistance.")
 
 
+        # Convert data to pandas DataFrame for easier calculations
+        df = pd.DataFrame(data['data'])
+        df['date'] = pd.to_datetime(df['date']).dt.date
+        df.set_index('date', inplace=True)
+        df.sort_index(inplace=True)
+        symbols = "TMUS"
+        
+        df['SMA_20'] = df['close'].rolling(window=20).mean()
+        df['SMA_50'] = df['close'].rolling(window=50).mean()
+        plt.figure(figsize=(12, 6))
+        plt.plot(df['close'], label='Close Price')
+        plt.plot(df['SMA_20'], label='20-Day SMA')
+        plt.plot(df['SMA_50'], label='50-Day SMA')
+        plt.title(f'{symbols} Stock Price with Moving Averages')
+        plt.xlabel('Date')
+        plt.ylabel('Price')
+        plt.legend()
+        plt.grid(True)
+        plt.tight_layout()
+        plt.show()
 
 
-# Example usage (replace with your API key and symbols):
 if __name__ == "__main__":
     api_key = "ebd13cb01404512ea3e1ab2ae81a7b0f"  # Get API key from environment variable
     symbols = "TMUS"  # Example symbol
     generate_marketstack_report(api_key, symbols)
-
-    # Load the generated report and analyze the trend
+    
     with open("marketstack_report.json", 'r') as f:
         import json
         data = json.load(f)
         analyze_trend(data)
         find_support_resistance(data)
+
+        # Convert data to pandas DataFrame for easier calculations
+        df = pd.DataFrame(data['data'])
+        df['date'] = pd.to_datetime(df['date']).dt.date
+        df.set_index('date', inplace=True)
+        df.sort_index(inplace=True)
+
+        # Calculate RSI
+        delta = df['close'].diff()
+        gain = (delta.where(delta > 0, 0.0)).fillna(0.0)
+        loss = (-delta.where(delta < 0, 0.0)).fillna(0.0)
+        avg_gain = gain.rolling(window=14).mean()
+        avg_loss = loss.rolling(window=14).mean()
+        rs = avg_gain / avg_loss
+        rsi = 100 - (100 / (1 + rs))
+        df['RSI'] = rsi
+        plt.figure(figsize=(12, 6))
+        plt.plot(df['RSI'], label='RSI')
+        plt.title(f'{symbols} RSI')
+        plt.xlabel('Date')
+        plt.ylabel('RSI')
+        plt.axhline(y=70, color='r', linestyle='--', label='Overbought (70)')
+        plt.axhline(y=30, color='g', linestyle='--', label='Oversold (30)')
+        plt.legend()
+        plt.grid(True)
+        plt.tight_layout()
+        plt.show()
