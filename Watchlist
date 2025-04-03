@@ -6,9 +6,9 @@ from numpy import polyfit
 import pandas as pd
 import matplotlib.pyplot as plt
 
-def generate_marketstack_report(api_key, symbols, filename="marketstack_report.json"):
+def generate_marketstack_report(api_key, symbols, filename="marketstack_report_watchlist.json"):
     """
-    Generates a Marketstack report in JSON format without using pandas.
+    Generates a Marketstack report in a JSON format without using pandas.
 
     Args:
         api_key (str): Your Marketstack API key.
@@ -21,7 +21,7 @@ def generate_marketstack_report(api_key, symbols, filename="marketstack_report.j
     params = {
         'access_key': api_key,
         'symbols': symbols,
-        'date_from': "2025-04-01",
+        'date_from': "2025-03-01",
         'date_to': "2025-12-31",
         'limit': 31,
     }
@@ -94,7 +94,7 @@ def find_support_resistance(data):
         df['date'] = pd.to_datetime(df['date']).dt.date
         df.set_index('date', inplace=True)
         df.sort_index(inplace=True)
-        symbols = "CHWY"
+        symbols = "AXON"
         
         df['SMA_20'] = df['close'].rolling(window=20).mean()
         df['SMA_50'] = df['close'].rolling(window=50).mean()
@@ -113,7 +113,7 @@ def find_support_resistance(data):
 
 if __name__ == "__main__":
     api_key = "ebd13cb01404512ea3e1ab2ae81a7b0f"  # Get API key from environment variable
-    symbols = "AAPL"  # Example symbol
+    symbols = "SONY"  # Example symbol
     generate_marketstack_report(api_key, symbols)
     
     with open("marketstack_report.json", 'r') as f:
