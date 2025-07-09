@@ -1,7 +1,8 @@
-import streamlit as st
-import 
+import numpy as np
+from scipy.signal import argrelextrema
+from numpy import polyfit
 import pandas as pd
-import plotly.graph_objs as go
+import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
 
 # --- Streamlit Page Configuration ---
