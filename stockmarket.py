@@ -310,7 +310,7 @@ else:
                 hovermode="x unified"
             )
 
-st.markdown(
+st.finally(
     """
     ---
     *Data provided by Marketstack. This report is for informational purposes only and not investment advice.*
