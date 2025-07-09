@@ -1,18 +1,13 @@
 import streamlit as st
 import pandas as pd
+import plotly.graph_objs as go
 from datetime import datetime, timedelta
 import requests # Import the requests library for API calls
-
-# Removed unused imports from previous versions
-# import numpy as np
-# from scipy.signal import argrelextrema
-# from numpy import polyfit
-# import matplotlib.pyplot as plt
 
 # --- Marketstack API Configuration ---
 # IMPORTANT: Replace 'YOUR_MARKETSTACK_API_KEY_HERE' with your actual Marketstack API key.
 # You can get one from https://marketstack.com/
-MARKETSTACK_API_KEY = 'ebd13cb01404512ea3e1ab2ae81a7b0f' 
+MARKETSTACK_API_KEY = "YOUR_MARKETSTACK_API_KEY_HERE"
 MARKETSTACK_BASE_URL = "http://api.marketstack.com/v1/"
 
 # --- Function to fetch data from Marketstack ---
@@ -62,28 +57,47 @@ def fetch_marketstack_data(ticker, start_date, end_date, api_key):
         df = pd.DataFrame(ticker_data)
 
         # Ensure 'date' column is datetime and set as index
-        df['date'] = pd.to_datetime(df['date']).dt.date # Convert to date object for cleaner index
+        # Convert to date object first to avoid time components interfering with indexing
+        df['date'] = pd.to_datetime(df['date']).dt.date
         df = df.set_index('date')
         df.index.name = 'Date'
 
         # Select and rename columns to match previous structure
-        df = df[['open', 'high', 'low', 'close', 'volume']]
+        # Ensure these column names match what Marketstack returns (e.g., 'open', 'high', 'low', 'close', 'volume')
+        # If Marketstack uses different names, you'll need to adjust these.
+        required_cols = ['open', 'high', 'low', 'close', 'volume']
+        if not all(col in df.columns for col in required_cols):
+            st.error(f"Marketstack response for {ticker} is missing expected columns. Found: {df.columns.tolist()}")
+            return pd.DataFrame(), None
+
+        df = df[required_cols]
         df.columns = ['Open', 'High', 'Low', 'Close', 'Volume']
         df = df.sort_index() # Ensure ascending date order for calculations
 
         # Get latest info for metrics
-        latest_data = df.iloc[-1]
-        prev_close = df.iloc[-2]['Close'] if len(df) > 1 else latest_data['Close']
-        daily_change = latest_data['Close'] - prev_close
-        daily_percent_change = (daily_change / prev_close) * 100 if prev_close != 0 else 0
+        if len(df) < 2: # Need at least two data points for previous close
+            st.warning(f"Not enough data for {ticker} to calculate daily change. Showing current price only.")
+            latest_data = df.iloc[-1]
+            info = {
+                'regularMarketPrice': latest_data['Close'],
+                'regularMarketChange': 0,
+                'regularMarketChangePercent': 0,
+                'previousClose': latest_data['Close'], # Set previous close to current if only one data point
+                'regularMarketVolume': latest_data['Volume']
+            }
+        else:
+            latest_data = df.iloc[-1]
+            prev_close = df.iloc[-2]['Close']
+            daily_change = latest_data['Close'] - prev_close
+            daily_percent_change = (daily_change / prev_close) * 100 if prev_close != 0 else 0
 
-        info = {
-            'regularMarketPrice': latest_data['Close'],
-            'regularMarketChange': daily_change,
-            'regularMarketChangePercent': daily_percent_change / 100, # Convert to decimal for consistency
-            'previousClose': prev_close,
-            'regularMarketVolume': latest_data['Volume']
-        }
+            info = {
+                'regularMarketPrice': latest_data['Close'],
+                'regularMarketChange': daily_change,
+                'regularMarketChangePercent': daily_percent_change / 100, # Convert to decimal for consistency
+                'previousClose': prev_close,
+                'regularMarketVolume': latest_data['Volume']
+            }
 
         return df, info
 
@@ -234,39 +248,74 @@ else:
             data[f'MA_{ma_short}'] = data['Close'].rolling(window=ma_short).mean()
             data[f'MA_{ma_long}'] = data['Close'].rolling(window=ma_long).mean()
         else:
-            st.warning(f"Not enough data points ({len(data)}) for {ticker} to calculate {ma_long}-day Moving Average.")
+            st.warning(f"Not enough data points ({len(data)}) for {ticker} to calculate {ma_long}-day Moving Average. Moving averages will not be displayed.")
+            # Set MAs to None or drop columns if not enough data
             data[f'MA_{ma_short}'] = None
             data[f'MA_{ma_long}'] = None
 
-        # Moving Averages - only add if calculated
-        if f'MA_{ma_short}' in data.columns and data[f'MA_{ma_short}'].notna().any():
-            st.write(st.Scatter(
-                x=data.index,
-                y=data[f'MA_{ma_short}'],
-                mode='lines',
-                name=f'{ma_short}-Day MA',
-                line=dict(color='orange', width=1)
-            ))
-        if f'MA_{ma_long}' in data.columns and data[f'MA_{ma_long}'].notna().any():
-            fig.add_trace(st.Scatter(
-                x=data.index,
-                y=data[f'MA_{ma_long}'],
-                mode='lines',
-                name=f'{ma_long}-Day MA',
-                line=dict(color='purple', width=1)
-            ))
 
-        # Update layout for better visualization
-        st.fig.update_layout(
-            title=f'{ticker} Price Chart with Moving Averages',
-            xaxis_title='Date',
-            yaxis_title='Price ($)',
-            xaxis_rangeslider_visible=False, # Hide range slider for cleaner look
-            template='plotly_white',
-            height=500,
-            hovermode="x unified"
-        )
-        st.plotly_chart(fig, use_container_width=True)
+        # Plotting with Plotly
+        st.subheader("Historical Price Chart")
+
+        # --- Debugging: Display DataFrame head and columns ---
+        st.write("--- Debugging Info ---")
+        st.write("DataFrame Head:")
+        st.write(data.head())
+        st.write("DataFrame Columns:")
+        st.write(data.columns.tolist())
+        st.write("--- End Debugging Info ---")
+
+        try:
+            fig = go.Figure()
+
+            # Check if required columns for candlestick exist
+            if all(col in data.columns for col in ['Open', 'High', 'Low', 'Close']) and not data.empty:
+                # Candlestick chart
+                fig.add_trace(go.Candlestick(
+                    x=data.index,
+                    open=data['Open'],
+                    high=data['High'],
+                    low=data['Low'],
+                    close=data['Close'],
+                    name='Candlestick'
+                ))
+            else:
+                st.warning("Cannot plot candlestick chart: Missing 'Open', 'High', 'Low', or 'Close' columns, or data is empty.")
+
+            # Moving Averages - only add if calculated and columns exist
+            if f'MA_{ma_short}' in data.columns and data[f'MA_{ma_short}'].notna().any():
+                fig.add_trace(go.Scatter(
+                    x=data.index,
+                    y=data[f'MA_{ma_short}'],
+                    mode='lines',
+                    name=f'{ma_short}-Day MA',
+                    line=dict(color='orange', width=1)
+                ))
+            if f'MA_{ma_long}' in data.columns and data[f'MA_{ma_long}'].notna().any():
+                fig.add_trace(go.Scatter(
+                    x=data.index,
+                    y=data[f'MA_{ma_long}'],
+                    mode='lines',
+                    name=f'{ma_long}-Day MA',
+                    line=dict(color='purple', width=1)
+                ))
+
+            # Update layout for better visualization
+            fig.update_layout(
+                title=f'{ticker} Price Chart with Moving Averages',
+                xaxis_title='Date',
+                yaxis_title='Price ($)',
+                xaxis_rangeslider_visible=False, # Hide range slider for cleaner look
+                template='plotly_white',
+                height=500,
+                hovermode="x unified"
+            )
+            st.plotly_chart(fig, use_container_width=True)
+
+        except Exception as plot_e:
+            st.error(f"An error occurred while generating the Plotly chart for {ticker}: {plot_e}")
+            st.info("Please check the data returned from Marketstack and the chart configuration.")
+
 
         # Display raw data (optional)
         st.subheader("Raw Historical Data")
