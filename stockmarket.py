@@ -256,10 +256,6 @@ else:
                 data[f'MA_{ma_short}'] = None
                 data[f'MA_{ma_long}'] = None
 
-
-            # Plotting with Plotly
-            st.subheader("Historical Price Chart")
-
             # --- Debugging: Display DataFrame head and columns ---
             # st.write("--- Debugging Info ---")
             # st.write("DataFrame Head:")
