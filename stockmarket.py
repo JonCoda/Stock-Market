@@ -1,18 +1,103 @@
 import streamlit as st
-import yfinance as yf # Added missing import for yfinance
 import pandas as pd
 import plotly.graph_objs as go
 from datetime import datetime, timedelta
+import requests # Import the requests library for API calls
 
-# Removed unused imports:
+# Removed unused imports from previous versions
 # import numpy as np
 # from scipy.signal import argrelextrema
 # from numpy import polyfit
 # import matplotlib.pyplot as plt
 
-# Removed invalid API key line as it's not standard Python and yfinance doesn't use it directly.
-# Args:
-#     api_key (str): "ebd13cb01404512ea3e1ab2ae81a7b0f"
+# --- Marketstack API Configuration ---
+# IMPORTANT: Replace 'YOUR_MARKETSTACK_API_KEY_HERE' with your actual Marketstack API key.
+# You can get one from https://marketstack.com/
+MARKETSTACK_API_KEY = ebd13cb01404512ea3e1ab2ae81a7b0f "YOUR_MARKETSTACK_API_KEY_HERE"
+MARKETSTACK_BASE_URL = "http://api.marketstack.com/v1/"
+
+# --- Function to fetch data from Marketstack ---
+def fetch_marketstack_data(ticker, start_date, end_date, api_key):
+    """
+    Fetches historical End-Of-Day (EOD) stock data from Marketstack API.
+
+    Args:
+        ticker (str): The stock ticker symbol (e.g., 'AAPL').
+        start_date (datetime.date): The start date for the historical data.
+        end_date (datetime.date): The end date for the historical data.
+        api_key (str): Your Marketstack API key.
+
+    Returns:
+        pandas.DataFrame: A DataFrame with 'Open', 'High', 'Low', 'Close', 'Volume'
+                          indexed by 'Date', or an empty DataFrame if data fetch fails.
+        dict: A dictionary containing the latest stock info, or None.
+    """
+    endpoint = f"eod"
+    params = {
+        "access_key": api_key,
+        "symbols": ticker,
+        "date_from": start_date.strftime("%Y-%m-%d"),
+        "date_to": end_date.strftime("%Y-%m-%d"),
+        "limit": 1000, # Max limit per request, adjust if needed for longer periods
+        "sort": "ASC" # Ensure data is sorted ascending by date
+    }
+
+    try:
+        response = requests.get(f"{MARKETSTACK_BASE_URL}{endpoint}", params=params)
+        response.raise_for_status() # Raise an HTTPError for bad responses (4xx or 5xx)
+        data = response.json()
+
+        if not data or 'data' not in data or not data['data']:
+            st.warning(f"No data found for {ticker} from Marketstack in the specified range.")
+            return pd.DataFrame(), None
+
+        # Marketstack returns a list of dictionaries, one for each date and symbol
+        # We need to filter for the specific ticker if multiple symbols were requested (though we request one here)
+        ticker_data = [item for item in data['data'] if item['symbol'] == ticker]
+
+        if not ticker_data:
+            st.warning(f"No data found for {ticker} after filtering Marketstack response.")
+            return pd.DataFrame(), None
+
+        # Convert to DataFrame
+        df = pd.DataFrame(ticker_data)
+
+        # Ensure 'date' column is datetime and set as index
+        df['date'] = pd.to_datetime(df['date']).dt.date # Convert to date object for cleaner index
+        df = df.set_index('date')
+        df.index.name = 'Date'
+
+        # Select and rename columns to match previous structure
+        df = df[['open', 'high', 'low', 'close', 'volume']]
+        df.columns = ['Open', 'High', 'Low', 'Close', 'Volume']
+        df = df.sort_index() # Ensure ascending date order for calculations
+
+        # Get latest info for metrics
+        latest_data = df.iloc[-1]
+        prev_close = df.iloc[-2]['Close'] if len(df) > 1 else latest_data['Close']
+        daily_change = latest_data['Close'] - prev_close
+        daily_percent_change = (daily_change / prev_close) * 100 if prev_close != 0 else 0
+
+        info = {
+            'regularMarketPrice': latest_data['Close'],
+            'regularMarketChange': daily_change,
+            'regularMarketChangePercent': daily_percent_change / 100, # Convert to decimal for consistency
+            'previousClose': prev_close,
+            'regularMarketVolume': latest_data['Volume']
+        }
+
+        return df, info
+
+    except requests.exceptions.RequestException as e:
+        st.error(f"Network or API error fetching data for {ticker}: {e}")
+        st.info("Please check your internet connection and Marketstack API key.")
+    except KeyError as e:
+        st.error(f"Data format error from Marketstack for {ticker}: Missing key {e}. API response might be unexpected.")
+    except Exception as e:
+        st.error(f"An unexpected error occurred while processing Marketstack data for {ticker}: {e}")
+
+    return pd.DataFrame(), None # Return empty DataFrame and None info on error
+
 
 # --- Streamlit Page Configuration ---
 st.set_page_config(
@@ -87,12 +172,12 @@ st.sidebar.header("Configuration")
 ticker_input = st.sidebar.text_input(
     "Enter Stock Ticker(s) (comma-separated)",
     "AAPL,GOOGL",
-    help="Example: AAPL,MSFT,GOOGL. Use official Yahoo Finance tickers."
+    help="Example: AAPL,MSFT,GOOGL. Use official Marketstack tickers."
 )
 tickers = [t.strip().upper() for t in ticker_input.split(',') if t.strip()]
 
 # Date range selection
-today = datetime.now()
+today = datetime.now().date() # Get only date part for comparison
 default_start_date = today - timedelta(days=365) # Default to 1 year ago
 start_date = st.sidebar.date_input("Start Date", default_start_date)
 end_date = st.sidebar.date_input("End Date", today)
@@ -109,70 +194,69 @@ ma_long = st.sidebar.slider("Long MA Period", 20, 200, 50)
 
 # --- Main Content Area ---
 
-if not tickers:
+if not MARKETSTACK_API_KEY or MARKETSTACK_API_KEY == "YOUR_MARKETSTACK_API_KEY_HERE":
+    st.error("Please replace 'YOUR_MARKETSTACK_API_KEY_HERE' in the code with your actual Marketstack API key.")
+elif not tickers:
     st.warning("Please enter at least one stock ticker in the sidebar.")
 else:
     for ticker in tickers:
         st.header(f"📊 {ticker} Stock Report")
 
-        try:
-            # Fetch data using yfinance
-            stock = yf.Ticker(ticker)
+        # Fetch data using Marketstack API
+        data, info = fetch_marketstack_data(ticker, start_date, end_date, MARKETSTACK_API_KEY)
 
-            # Get basic stock info
-            info = stock.info
-            # Check if info dictionary is empty or if a common key like 'regularMarketPrice' is missing
-            if not info or 'regularMarketPrice' not in info:
-                st.error(f"Could not retrieve information for {ticker}. Please check the ticker symbol or try again later.")
-                continue
+        if data.empty or info is None:
+            # Error message already handled in fetch_marketstack_data
+            continue
 
-            # Display key information in columns
-            col1, col2, col3, col4 = st.columns(4)
-            with col1:
-                st.metric("Current Price", f"${info.get('regularMarketPrice', 'N/A'):.2f}")
-            with col2:
-                daily_change = info.get('regularMarketChange', 0)
-                daily_percent_change = info.get('regularMarketChangePercent', 0) * 100
-                st.metric(
-                    "Daily Change",
-                    f"${daily_change:.2f}",
-                    delta=f"{daily_percent_change:.2f}%",
-                    delta_color="normal" if daily_change >= 0 else "inverse"
-                )
-            with col3:
-                st.metric("Previous Close", f"${info.get('previousClose', 'N/A'):.2f}")
-            with col4:
-                st.metric("Volume", f"{info.get('regularMarketVolume', 'N/A'):,}")
+        # Display key information in columns
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("Current Price", f"${info.get('regularMarketPrice', 'N/A'):.2f}")
+        with col2:
+            daily_change = info.get('regularMarketChange', 0)
+            daily_percent_change = info.get('regularMarketChangePercent', 0) * 100
+            st.metric(
+                "Daily Change",
+                f"${daily_change:.2f}",
+                delta=f"{daily_percent_change:.2f}%",
+                delta_color="normal" if daily_change >= 0 else "inverse"
+            )
+        with col3:
+            st.metric("Previous Close", f"${info.get('previousClose', 'N/A'):.2f}")
+        with col4:
+            st.metric("Volume", f"{info.get('regularMarketVolume', 'N/A'):,}")
 
-            st.markdown("---")
+        st.markdown("---")
 
-            # Fetch historical data
-            data = stock.history(start=start_date, end=end_date)
-
-            if data.empty:
-                st.warning(f"No historical data found for {ticker} in the selected date range.")
-                continue
-
-            # Calculate Moving Averages
+        # Calculate Moving Averages
+        # Ensure there's enough data for MA calculation
+        if len(data) >= ma_long:
             data[f'MA_{ma_short}'] = data['Close'].rolling(window=ma_short).mean()
             data[f'MA_{ma_long}'] = data['Close'].rolling(window=ma_long).mean()
+        else:
+            st.warning(f"Not enough data points ({len(data)}) for {ticker} to calculate {ma_long}-day Moving Average.")
+            data[f'MA_{ma_short}'] = None
+            data[f'MA_{ma_long}'] = None
 
-            # Plotting with Plotly
-            st.subheader("Historical Price Chart")
 
-            fig = go.Figure()
+        # Plotting with Plotly
+        st.subheader("Historical Price Chart")
 
-            # Candlestick chart
-            fig.add_trace(go.Candlestick(
-                x=data.index,
-                open=data['Open'],
-                high=data['High'],
-                low=data['Low'],
-                close=data['Close'],
-                name='Candlestick'
-            ))
+        fig = go.Figure()
 
-            # Moving Averages
+        # Candlestick chart
+        fig.add_trace(go.Candlestick(
+            x=data.index,
+            open=data['Open'],
+            high=data['High'],
+            low=data['Low'],
+            close=data['Close'],
+            name='Candlestick'
+        ))
+
+        # Moving Averages - only add if calculated
+        if f'MA_{ma_short}' in data.columns and data[f'MA_{ma_short}'].notna().any():
             fig.add_trace(go.Scatter(
                 x=data.index,
                 y=data[f'MA_{ma_short}'],
@@ -180,6 +264,7 @@ else:
                 name=f'{ma_short}-Day MA',
                 line=dict(color='orange', width=1)
             ))
+        if f'MA_{ma_long}' in data.columns and data[f'MA_{ma_long}'].notna().any():
             fig.add_trace(go.Scatter(
                 x=data.index,
                 y=data[f'MA_{ma_long}'],
@@ -188,32 +273,28 @@ else:
                 line=dict(color='purple', width=1)
             ))
 
-            # Update layout for better visualization
-            fig.update_layout(
-                title=f'{ticker} Price Chart with Moving Averages',
-                xaxis_title='Date',
-                yaxis_title='Price ($)',
-                xaxis_rangeslider_visible=False, # Hide range slider for cleaner look
-                template='plotly_white',
-                height=500,
-                hovermode="x unified"
-            )
-            st.plotly_chart(fig, use_container_width=True)
+        # Update layout for better visualization
+        fig.update_layout(
+            title=f'{ticker} Price Chart with Moving Averages',
+            xaxis_title='Date',
+            yaxis_title='Price ($)',
+            xaxis_rangeslider_visible=False, # Hide range slider for cleaner look
+            template='plotly_white',
+            height=500,
+            hovermode="x unified"
+        )
+        st.plotly_chart(fig, use_container_width=True)
 
-            # Display raw data (optional)
-            st.subheader("Raw Historical Data")
-            st.dataframe(data.tail(10)) # Show last 10 rows of data
+        # Display raw data (optional)
+        st.subheader("Raw Historical Data")
+        st.dataframe(data.tail(10)) # Show last 10 rows of data
 
-            st.markdown("---")
-
-        except Exception as e:
-            st.error(f"An error occurred while fetching data for {ticker}: {e}")
-            st.info("Please ensure the ticker symbol is correct and you have an active internet connection.")
+        st.markdown("---")
 
 st.markdown(
     """
     ---
-    *Data provided by Yahoo Finance. This report is for informational purposes only and not investment advice.*
+    *Data provided by Marketstack. This report is for informational purposes only and not investment advice.*
     """
 )
 
