@@ -122,53 +122,6 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- Custom CSS for better aesthetics ---
-st.markdown("""
-    <style>
-        .main {
-            background-color: #f0f2f6;
-            padding: 20px;
-            border-radius: 10px;
-        }
-        .stButton>button {
-            background-color: #4CAF50;
-            color: white;
-            border-radius: 8px;
-            padding: 10px 20px;
-            font-size: 16px;
-            border: none;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-        .stButton>button:hover {
-            background-color: #45a049;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-        }
-        .stTextInput>div>div>input {
-            border-radius: 8px;
-            border: 1px solid #ccc;
-            padding: 10px;
-        }
-        .stSelectbox>div>div {
-            border-radius: 8px;
-            border: 1px solid #ccc;
-            padding: 5px;
-        }
-        .stAlert {
-            border-radius: 8px;
-        }
-        h1, h2, h3 {
-            color: #2c3e50;
-        }
-        .block-container {
-            padding-top: 1rem;
-            padding-bottom: 1rem;
-            padding-left: 5%;
-            padding-right: 5%;
-        }
-    </style>
-""", unsafe_allow_html=True)
 
 # --- Title and Description ---
 st.title("📈 General Stock Market Report")
