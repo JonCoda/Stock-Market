@@ -238,22 +238,6 @@ else:
             data[f'MA_{ma_short}'] = None
             data[f'MA_{ma_long}'] = None
 
-
-        # Plotting with Plotly
-        st.subheader("Historical Price Chart")
-
-        fig = go.Figure()
-
-        # Candlestick chart
-        fig.add_trace(go.Candlestick(
-            x=data.index,
-            open=data['Open'],
-            high=data['High'],
-            low=data['Low'],
-            close=data['Close'],
-            name='Candlestick'
-        ))
-
         # Moving Averages - only add if calculated
         if f'MA_{ma_short}' in data.columns and data[f'MA_{ma_short}'].notna().any():
             fig.add_trace(go.Scatter(
