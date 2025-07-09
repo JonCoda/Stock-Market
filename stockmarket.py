@@ -309,12 +309,6 @@ else:
                 height=500,
                 hovermode="x unified"
             )
-            st.plotly_chart(fig, use_container_width=True)
-
-        except Exception as plot_e:
-            st.error(f"An error occurred while generating the Plotly chart for {ticker}: {plot_e}")
-            st.info("Please check the data returned from Marketstack and the chart configuration.")
-
 
         # Display raw data (optional)
         st.subheader("Raw Historical Data")
