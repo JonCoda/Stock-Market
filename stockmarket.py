@@ -240,7 +240,7 @@ else:
 
         # Moving Averages - only add if calculated
         if f'MA_{ma_short}' in data.columns and data[f'MA_{ma_short}'].notna().any():
-            fig.add_trace(Scatter(
+            fig.add_trace(st.Scatter(
                 x=data.index,
                 y=data[f'MA_{ma_short}'],
                 mode='lines',
@@ -248,7 +248,7 @@ else:
                 line=dict(color='orange', width=1)
             ))
         if f'MA_{ma_long}' in data.columns and data[f'MA_{ma_long}'].notna().any():
-            fig.add_trace(Scatter(
+            fig.add_trace(st.Scatter(
                 x=data.index,
                 y=data[f'MA_{ma_long}'],
                 mode='lines',
