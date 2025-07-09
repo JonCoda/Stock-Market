@@ -309,4 +309,10 @@ else:
                 height=500,
                 hovermode="x unified"
             )
+st.markdown(
+    """
+    ---
+    *Data provided by Marketstack. This report is for informational purposes only and not investment advice.*
+    """
+) 
 
