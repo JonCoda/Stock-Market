@@ -220,20 +220,6 @@ else:
             try:
                 fig = go.Figure()
 
-                # Check if required columns for candlestick exist
-                if all(col in data.columns for col in ['Open', 'High', 'Low', 'Close']) and not data.empty:
-                    # Candlestick chart
-                    fig.add_trace(go.Candlestick(
-                        x=data.index,
-                        open=data['Open'],
-                        high=data['High'],
-                        low=data['Low'],
-                        close=data['Close'],
-                        name='Candlestick'
-                    ))
-                else:
-                    st.warning("Cannot plot candlestick chart: Missing 'Open', 'High', 'Low', or 'Close' columns, or data is empty.")
-
                 # Moving Averages - only add if calculated and columns exist
                 if f'MA_{ma_short}' in data.columns and data[f'MA_{ma_short}'].notna().any():
                     fig.add_trace(go.Scatter(
