@@ -1,12 +1,18 @@
-import numpy as np
-from scipy.signal import argrelextrema
-from numpy import polyfit
+import streamlit as st
+import yfinance as yf # Added missing import for yfinance
 import pandas as pd
-import matplotlib.pyplot as plt
+import plotly.graph_objs as go
 from datetime import datetime, timedelta
 
-Args:
-    api_key (str): "ebd13cb01404512ea3e1ab2ae81a7b0f" 
+# Removed unused imports:
+# import numpy as np
+# from scipy.signal import argrelextrema
+# from numpy import polyfit
+# import matplotlib.pyplot as plt
+
+# Removed invalid API key line as it's not standard Python and yfinance doesn't use it directly.
+# Args:
+#     api_key (str): "ebd13cb01404512ea3e1ab2ae81a7b0f"
 
 # --- Streamlit Page Configuration ---
 st.set_page_config(
@@ -115,8 +121,9 @@ else:
 
             # Get basic stock info
             info = stock.info
-            if not info:
-                st.error(f"Could not retrieve information for {ticker}. Please check the ticker symbol.")
+            # Check if info dictionary is empty or if a common key like 'regularMarketPrice' is missing
+            if not info or 'regularMarketPrice' not in info:
+                st.error(f"Could not retrieve information for {ticker}. Please check the ticker symbol or try again later.")
                 continue
 
             # Display key information in columns
