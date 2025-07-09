@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-import plotly.graph_objs as go
 from datetime import datetime, timedelta
 import requests # Import the requests library for API calls
 
