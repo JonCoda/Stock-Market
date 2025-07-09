@@ -13,7 +13,7 @@ import requests # Import the requests library for API calls
 # IMPORTANT: Replace 'YOUR_MARKETSTACK_API_KEY_HERE' with your actual Marketstack API key.
 # You can get one from https://marketstack.com/
 MARKETSTACK_API_KEY = 'ebd13cb01404512ea3e1ab2ae81a7b0f' 
-MARKETSTACK_BASE_URL = "http://api.marketstack.com"
+MARKETSTACK_BASE_URL = "http://api.marketstack.com/v1/"
 
 # --- Function to fetch data from Marketstack ---
 def fetch_marketstack_data(ticker, start_date, end_date, api_key):
