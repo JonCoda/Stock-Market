@@ -62,8 +62,6 @@ def fetch_marketstack_data(ticker, start_date, end_date, api_key):
         df.index.name = 'Date'
 
         # Select and rename columns to match previous structure
-        # Ensure these column names match what Marketstack returns (e.g., 'open', 'high', 'low', 'close', 'volume')
-        # If Marketstack uses different names, you'll need to adjust these.
         required_cols = ['open', 'high', 'low', 'close', 'volume']
         if not all(col in df.columns for col in required_cols):
             st.error(f"Marketstack response for {ticker} is missing expected columns. Found: {df.columns.tolist()}")
@@ -107,6 +105,11 @@ def fetch_marketstack_data(ticker, start_date, end_date, api_key):
         st.error(f"Data format error from Marketstack for {ticker}: Missing key {e}. API response might be unexpected.")
     except Exception as e:
         st.error(f"An unexpected error occurred while processing Marketstack data for {ticker}: {e}")
+
+    finally:
+        # This block will always execute, regardless of whether an exception occurred or not.
+        # You can add cleanup code or logging here.
+        pass # No specific cleanup needed for this simple request, but good for demonstration.
 
     return pd.DataFrame(), None # Return empty DataFrame and None info on error
 
@@ -214,105 +217,128 @@ else:
     for ticker in tickers:
         st.header(f"📊 {ticker} Stock Report")
 
-        # Fetch data using Marketstack API
-        data, info = fetch_marketstack_data(ticker, start_date, end_date, MARKETSTACK_API_KEY)
-
-        if data.empty or info is None:
-            # Error message already handled in fetch_marketstack_data
-            continue
-
-        # Display key information in columns
-        col1, col2, col3, col4 = st.columns(4)
-        with col1:
-            st.metric("Current Price", f"${info.get('regularMarketPrice', 'N/A'):.2f}")
-        with col2:
-            daily_change = info.get('regularMarketChange', 0)
-            daily_percent_change = info.get('regularMarketChangePercent', 0) * 100
-            st.metric(
-                "Daily Change",
-                f"${daily_change:.2f}",
-                delta=f"{daily_percent_change:.2f}%",
-                delta_color="normal" if daily_change >= 0 else "inverse"
-            )
-        with col3:
-            st.metric("Previous Close", f"${info.get('previousClose', 'N/A'):.2f}")
-        with col4:
-            st.metric("Volume", f"{info.get('regularMarketVolume', 'N/A'):,}")
-
-        st.markdown("---")
-
-        # Calculate Moving Averages
-        # Ensure there's enough data for MA calculation
-        if len(data) >= ma_long:
-            data[f'MA_{ma_short}'] = data['Close'].rolling(window=ma_short).mean()
-            data[f'MA_{ma_long}'] = data['Close'].rolling(window=ma_long).mean()
-        else:
-            st.warning(f"Not enough data points ({len(data)}) for {ticker} to calculate {ma_long}-day Moving Average. Moving averages will not be displayed.")
-            # Set MAs to None or drop columns if not enough data
-            data[f'MA_{ma_short}'] = None
-            data[f'MA_{ma_long}'] = None
-
-
-        # Plotting with Plotly
-        st.subheader("Historical Price Chart")
-
-        # --- Debugging: Display DataFrame head and columns ---
-        st.write("--- Debugging Info ---")
-        st.write("DataFrame Head:")
-        st.write(data.head())
-        st.write("DataFrame Columns:")
-        st.write(data.columns.tolist())
-        st.write("--- End Debugging Info ---")
-
         try:
-            fig = go.Figure()
+            # Fetch data using Marketstack API
+            data, info = fetch_marketstack_data(ticker, start_date, end_date, MARKETSTACK_API_KEY)
 
-            # Check if required columns for candlestick exist
-            if all(col in data.columns for col in ['Open', 'High', 'Low', 'Close']) and not data.empty:
-                # Candlestick chart
-                fig.add_trace(go.Candlestick(
-                    x=data.index,
-                    open=data['Open'],
-                    high=data['High'],
-                    low=data['Low'],
-                    close=data['Close'],
-                    name='Candlestick'
-                ))
+            if data.empty or info is None:
+                # Error message already handled in fetch_marketstack_data
+                continue
+
+            # Display key information in columns
+            col1, col2, col3, col4 = st.columns(4)
+            with col1:
+                st.metric("Current Price", f"${info.get('regularMarketPrice', 'N/A'):.2f}")
+            with col2:
+                daily_change = info.get('regularMarketChange', 0)
+                daily_percent_change = info.get('regularMarketChangePercent', 0) * 100
+                st.metric(
+                    "Daily Change",
+                    f"${daily_change:.2f}",
+                    delta=f"{daily_percent_change:.2f}%",
+                    delta_color="normal" if daily_change >= 0 else "inverse"
+                )
+            with col3:
+                st.metric("Previous Close", f"${info.get('previousClose', 'N/A'):.2f}")
+            with col4:
+                st.metric("Volume", f"{info.get('regularMarketVolume', 'N/A'):,}")
+
+            st.markdown("---")
+
+            # Calculate Moving Averages
+            # Ensure there's enough data for MA calculation
+            if len(data) >= ma_long:
+                data[f'MA_{ma_short}'] = data['Close'].rolling(window=ma_short).mean()
+                data[f'MA_{ma_long}'] = data['Close'].rolling(window=ma_long).mean()
             else:
-                st.warning("Cannot plot candlestick chart: Missing 'Open', 'High', 'Low', or 'Close' columns, or data is empty.")
+                st.warning(f"Not enough data points ({len(data)}) for {ticker} to calculate {ma_long}-day Moving Average. Moving averages will not be displayed.")
+                # Set MAs to None or drop columns if not enough data
+                data[f'MA_{ma_short}'] = None
+                data[f'MA_{ma_long}'] = None
 
-            # Moving Averages - only add if calculated and columns exist
-            if f'MA_{ma_short}' in data.columns and data[f'MA_{ma_short}'].notna().any():
-                fig.add_trace(go.Scatter(
-                    x=data.index,
-                    y=data[f'MA_{ma_short}'],
-                    mode='lines',
-                    name=f'{ma_short}-Day MA',
-                    line=dict(color='orange', width=1)
-                ))
-            if f'MA_{ma_long}' in data.columns and data[f'MA_{ma_long}'].notna().any():
-                fig.add_trace(go.Scatter(
-                    x=data.index,
-                    y=data[f'MA_{ma_long}'],
-                    mode='lines',
-                    name=f'{ma_long}-Day MA',
-                    line=dict(color='purple', width=1)
-                ))
 
-            # Update layout for better visualization
-            fig.update_layout(
-                title=f'{ticker} Price Chart with Moving Averages',
-                xaxis_title='Date',
-                yaxis_title='Price ($)',
-                xaxis_rangeslider_visible=False, # Hide range slider for cleaner look
-                template='plotly_white',
-                height=500,
-                hovermode="x unified"
-            )
-finally( 
+            # Plotting with Plotly
+            st.subheader("Historical Price Chart")
+
+            # --- Debugging: Display DataFrame head and columns ---
+            # st.write("--- Debugging Info ---")
+            # st.write("DataFrame Head:")
+            # st.write(data.head())
+            # st.write("DataFrame Columns:")
+            # st.write(data.columns.tolist())
+            # st.write("--- End Debugging Info ---")
+
+            try:
+                fig = go.Figure()
+
+                # Check if required columns for candlestick exist
+                if all(col in data.columns for col in ['Open', 'High', 'Low', 'Close']) and not data.empty:
+                    # Candlestick chart
+                    fig.add_trace(go.Candlestick(
+                        x=data.index,
+                        open=data['Open'],
+                        high=data['High'],
+                        low=data['Low'],
+                        close=data['Close'],
+                        name='Candlestick'
+                    ))
+                else:
+                    st.warning("Cannot plot candlestick chart: Missing 'Open', 'High', 'Low', or 'Close' columns, or data is empty.")
+
+                # Moving Averages - only add if calculated and columns exist
+                if f'MA_{ma_short}' in data.columns and data[f'MA_{ma_short}'].notna().any():
+                    fig.add_trace(go.Scatter(
+                        x=data.index,
+                        y=data[f'MA_{ma_short}'],
+                        mode='lines',
+                        name=f'{ma_short}-Day MA',
+                        line=dict(color='orange', width=1)
+                    ))
+                if f'MA_{ma_long}' in data.columns and data[f'MA_{ma_long}'].notna().any():
+                    fig.add_trace(go.Scatter(
+                        x=data.index,
+                        y=data[f'MA_{ma_long}'],
+                        mode='lines',
+                        name=f'{ma_long}-Day MA',
+                        line=dict(color='purple', width=1)
+                    ))
+
+                # Update layout for better visualization
+                fig.update_layout(
+                    title=f'{ticker} Price Chart with Moving Averages',
+                    xaxis_title='Date',
+                    yaxis_title='Price ($)',
+                    xaxis_rangeslider_visible=False, # Hide range slider for cleaner look
+                    template='plotly_white',
+                    height=500,
+                    hovermode="x unified"
+                )
+                st.plotly_chart(fig, use_container_width=True)
+
+            except Exception as plot_e:
+                st.error(f"An error occurred while generating the Plotly chart for {ticker}: {plot_e}")
+                st.info("Please check the data returned from Marketstack and the chart configuration.")
+
+
+            # Display raw data (optional)
+            st.subheader("Raw Historical Data")
+            st.dataframe(data.tail(10)) # Show last 10 rows of data
+
+            st.markdown("---")
+
+        except Exception as ticker_processing_e:
+            st.error(f"An overall error occurred while processing {ticker}: {ticker_processing_e}")
+            st.info("Skipping this ticker due to an unhandled error.")
+        finally:
+            # This block will always execute after trying to process each ticker,
+            # regardless of whether an error occurred or not.
+            st.info(f"Finished processing report for {ticker}.")
+
+
+st.markdown(
     """
     ---
     *Data provided by Marketstack. This report is for informational purposes only and not investment advice.*
     """
-) 
+)
 
