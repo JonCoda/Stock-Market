@@ -240,7 +240,7 @@ else:
 
         # Moving Averages - only add if calculated
         if f'MA_{ma_short}' in data.columns and data[f'MA_{ma_short}'].notna().any():
-            fig.add_trace(st.Scatter(
+            st.fig.add_trace(st.Scatter(
                 x=data.index,
                 y=data[f'MA_{ma_short}'],
                 mode='lines',
@@ -257,7 +257,7 @@ else:
             ))
 
         # Update layout for better visualization
-        fig.update_layout(
+        st.fig.update_layout(
             title=f'{ticker} Price Chart with Moving Averages',
             xaxis_title='Date',
             yaxis_title='Price ($)',
