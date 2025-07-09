@@ -310,7 +310,7 @@ else:
                 hovermode="x unified"
             )
 
-(finally:
+(except:
     """
     ---
     *Data provided by Marketstack. This report is for informational purposes only and not investment advice.*
