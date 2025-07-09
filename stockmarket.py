@@ -310,12 +310,6 @@ else:
                 hovermode="x unified"
             )
 
-        # Display raw data (optional)
-        st.subheader("Raw Historical Data")
-        st.dataframe(data.tail(10)) # Show last 10 rows of data
-
-        st.markdown("---")
-
 st.markdown(
     """
     ---
