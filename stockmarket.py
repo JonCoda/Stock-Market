@@ -309,7 +309,7 @@ else:
                 height=500,
                 hovermode="x unified"
             )
-st.finally( 
+finally( 
     """
     ---
     *Data provided by Marketstack. This report is for informational purposes only and not investment advice.*
