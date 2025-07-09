@@ -12,7 +12,7 @@ import requests # Import the requests library for API calls
 # --- Marketstack API Configuration ---
 # IMPORTANT: Replace 'YOUR_MARKETSTACK_API_KEY_HERE' with your actual Marketstack API key.
 # You can get one from https://marketstack.com/
-MARKETSTACK_API_KEY = "ebd13cb01404512ea3e1ab2ae81a7b0f"
+MARKETSTACK_API_KEY = 'ebd13cb01404512ea3e1ab2ae81a7b0f' 
 MARKETSTACK_BASE_URL = "http://api.marketstack.com"
 
 # --- Function to fetch data from Marketstack ---
