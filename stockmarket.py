@@ -5,6 +5,9 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
 
+    Args:
+        api_key (str): ebd13cb01404512ea3e1ab2ae81a7b0f
+
 # --- Streamlit Page Configuration ---
 st.set_page_config(
     page_title="General Stock Market Report",
